@@ -56,3 +56,17 @@ def generate_audio(
     command.append(str(path))
     subprocess.run(command, check=True, capture_output=True)
     return path
+
+
+def write_wav_id3(path: Path, title: str, artist: str, album: str) -> None:
+    """Attach ID3 frames to a WAV fixture for tag-reading tests."""
+
+    from mutagen.id3 import TALB, TIT2, TPE1
+    from mutagen.wave import WAVE
+
+    audio = WAVE(path)
+    audio.add_tags()
+    audio.tags.add(TIT2(encoding=3, text=title))
+    audio.tags.add(TPE1(encoding=3, text=artist))
+    audio.tags.add(TALB(encoding=3, text=album))
+    audio.save()
