@@ -3,10 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QItemSelectionModel, Qt
+from PySide6.QtCore import QItemSelectionModel, QMimeData, QPointF, Qt, QUrl
+from PySide6.QtGui import QDropEvent
+from PySide6.QtWidgets import QApplication
 
 from musetop.app.config import ConfigManager
 from musetop.ui.main_window import MainWindow
+from musetop.ui.widgets.playlist_model import ROW_MIME_TYPE
 from tests.fake_engine import FakeEngine
 
 
@@ -143,7 +146,7 @@ def test_seek_slider_emits_seconds(window: MainWindow) -> None:
 
 def test_play_with_empty_playlist_reports_status(window: MainWindow) -> None:
     window._on_play_pause()
-    assert "vacia" in window.statusBar().currentMessage()
+    assert "vacía" in window.statusBar().currentMessage()
 
 
 def test_stop_resets_progress(window: MainWindow, tmp_path: Path) -> None:
@@ -159,6 +162,45 @@ def test_tree_drop_slot_accepts_paths(window: MainWindow, tmp_path: Path) -> Non
     files = make_files(tmp_path / "music", ["dropped.mp3"])
     window.playlist_view.files_dropped.emit(files)
     assert window.playlist_model.rowCount() == 1
+
+
+def test_window_accepts_real_file_drop(window: MainWindow, tmp_path: Path) -> None:
+    dropped = make_files(tmp_path / "music", ["dropped.flac"])[0]
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(dropped))])
+    event = QDropEvent(
+        QPointF(20, 20),
+        Qt.DropAction.CopyAction,
+        mime,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    window.dropEvent(event)
+    assert window.playlist_model.rowCount() == 1
+    assert event.isAccepted()
+
+
+def test_view_reorders_rows_with_internal_drop(window: MainWindow, tmp_path: Path) -> None:
+    files = make_files(tmp_path / "music", ["a.mp3", "b.flac", "c.opus"])
+    window.load_paths(files)
+    window.playlist_view.show()
+    window.playlist_view.resize(700, 300)
+    window.show()
+    QApplication.processEvents()
+    mime = QMimeData()
+    mime.setData(ROW_MIME_TYPE, b"0")
+    point = window.playlist_view.visualRect(window.playlist_model.index(2, 1)).center()
+    event = QDropEvent(
+        QPointF(point),
+        Qt.DropAction.MoveAction,
+        mime,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    window.playlist_view.dropEvent(event)
+    assert event.isAccepted()
+    assert [track.title for track in window.playlist_model.playlist] == ["b", "a", "c"]
+    assert [path.name for path in window.engine.paths] == ["b.flac", "a.mp3", "c.opus"]
 
 
 def test_500_file_ui_load_under_five_seconds(window: MainWindow, tmp_path: Path) -> None:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QSignalBlocker, QSize, Qt, Signal
-from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -251,9 +250,3 @@ class PlayerBar(QWidget):
         if self._duration <= 0:
             return
         self.seek_requested.emit(self.progress_slider.value() / 1000 * self._duration)
-
-
-def color_to_hex(color: QColor) -> str:
-    """Return a lowercase ``#rrggbb`` string."""
-
-    return color.name(QColor.NameFormat.HexRgb).lower()

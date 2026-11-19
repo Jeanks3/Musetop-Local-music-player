@@ -12,7 +12,7 @@ from musetop import APP_NAME, __version__
 from musetop.app.logging_setup import configure_logging
 from musetop.ui.main_window import MainWindow
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("musetop.main")
 
 
 def create_application(arguments: Sequence[str] | None = None) -> QApplication:
@@ -37,6 +37,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     app = create_application(arguments)
     window = MainWindow()
     window.show()
+    logger.info("Main window ready")
     exit_code = app.exec()
     logger.info("Musetop exited with code %s", exit_code)
     return exit_code

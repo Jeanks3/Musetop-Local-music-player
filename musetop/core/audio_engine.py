@@ -177,7 +177,7 @@ class AudioEngine(QObject):
             return False
         path = self._playlist[index]
         if not path.is_file():
-            message = f"No se encontro el archivo: {path.name}"
+            message = f"No se encontró el archivo: {path.name}"
             logger.error("Missing media file: %s", path)
             self.error_occurred.emit(message)
             return False
@@ -395,7 +395,7 @@ class AudioEngine(QObject):
         try:
             self._mode = PlaybackMode(mode)
         except ValueError as exc:
-            raise ValueError(f"Modo de reproduccion desconocido: {mode}") from exc
+            raise ValueError(f"Modo de reproducción desconocido: {mode}") from exc
 
     def toggle_mode(self) -> PlaybackMode:
         """Switch between sequential and repeat-all."""

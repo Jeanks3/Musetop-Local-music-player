@@ -55,6 +55,15 @@ def test_mp4_uses_standard_metadata(tmp_path: Path) -> None:
     assert (track.title, track.artist, track.album) == ("M4A", "Artista M4A", "Album M4A")
 
 
+def test_untagged_ogg_falls_back_without_error(tmp_path: Path) -> None:
+    path = generate_audio(tmp_path / "sin_etiquetas.ogg", duration=1.0)
+    track = read_track(path)
+    assert track.title == "sin_etiquetas"
+    assert track.artist == UNKNOWN_ARTIST
+    assert track.album == UNKNOWN_ALBUM
+    assert track.duration == pytest.approx(1.0, abs=0.2)
+
+
 def test_raw_aac_falls_back_to_stem_but_keeps_duration(tmp_path: Path) -> None:
     path = generate_audio(tmp_path / "sin_etiquetas.aac", duration=1.0)
     track = read_track(path)

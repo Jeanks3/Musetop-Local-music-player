@@ -10,7 +10,6 @@ from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
 from musetop.app.config import (
-    DEFAULT_ACCENT,
     THEME_DARK,
     THEME_LIGHT,
     THEME_SYSTEM,
@@ -175,7 +174,6 @@ class ThemeManager(QObject):
 
 
 __all__ = [
-    "DEFAULT_ACCENT",
     "ThemeManager",
     "detect_system_theme",
     "resolve_theme",

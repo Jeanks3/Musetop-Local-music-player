@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Musetop
+GenericName=Reproductor de música
+Comment=Reproductor de música de escritorio offline
+Exec=musetop
+Icon=musetop
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=música;audio;reproductor;
+StartupNotify=true
+StartupWMClass=Musetop

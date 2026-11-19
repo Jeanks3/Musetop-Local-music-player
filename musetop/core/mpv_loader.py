@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 _mpv_module: ModuleType | None = None
 _load_error: str | None = None
 _lock = threading.Lock()
+_dll_directory_handle: object | None = None
 
 
 def candidate_libraries() -> list[Path]:
@@ -63,9 +64,13 @@ def candidate_libraries() -> list[Path]:
 
 
 def _preload(library_path: Path) -> None:
+    global _dll_directory_handle
     library_dir = library_path.parent
-    if sys.platform.startswith("win") and hasattr(os, "add_dll_directory"):
-        os.add_dll_directory(str(library_dir))
+    if sys.platform.startswith("win"):
+        if hasattr(os, "add_dll_directory"):
+            _dll_directory_handle = os.add_dll_directory(str(library_dir))
+        ctypes.CDLL(str(library_path))
+        return
     ctypes.CDLL(str(library_path), mode=ctypes.RTLD_GLOBAL)
 
 
@@ -90,7 +95,7 @@ def load_mpv_module() -> ModuleType:
         libraries = candidate_libraries()
         if not libraries:
             raise OSError(
-                "No se encontro libmpv. Instala libmpv o coloca la biblioteca en vendor/lib."
+                "No se encontró libmpv. Instala libmpv o coloca la biblioteca en vendor/lib."
             )
 
         library_path = libraries[0]
@@ -131,7 +136,12 @@ def mpv_load_error() -> str | None:
 def reset_mpv_module_cache() -> None:
     """Clear the cached module; used by tests."""
 
-    global _mpv_module, _load_error
+    global _mpv_module, _load_error, _dll_directory_handle
     with _lock:
         _mpv_module = None
         _load_error = None
+        if _dll_directory_handle is not None:
+            close = getattr(_dll_directory_handle, "close", None)
+            if callable(close):
+                close()
+            _dll_directory_handle = None

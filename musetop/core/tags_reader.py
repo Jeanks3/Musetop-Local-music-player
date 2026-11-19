@@ -55,7 +55,7 @@ def _extract(tags: Any, keys: tuple[str, ...]) -> str:
     for key in keys:
         try:
             value = tags.get(key)
-        except (AttributeError, KeyError, TypeError):
+        except (AttributeError, KeyError, TypeError, ValueError):
             continue
         if value is None:
             continue

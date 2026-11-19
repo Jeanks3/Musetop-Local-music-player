@@ -9,6 +9,7 @@ from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
 from musetop.app.config import ConfigManager, default_config
+from musetop.core.audio_engine import AudioEngine, PlaybackState
 from musetop.ui.main_window import MainWindow
 from musetop.ui.theme.colors import (
     best_text_color,
@@ -19,6 +20,7 @@ from musetop.ui.theme.colors import (
     relative_luminance,
 )
 from musetop.ui.theme.manager import ThemeManager, detect_system_theme, resolve_theme
+from tests.audio_factory import ffmpeg_available, generate_audio
 from tests.fake_engine import FakeEngine
 
 ACCENTS = ("#1f5fd0", "#ffffff", "#000000", "#ffff00", "#808080", "#ff0000", "#00ff00", "#123456", "#abcdef")
@@ -170,6 +172,31 @@ def test_theme_switch_is_fast_and_does_not_touch_playback(qtbot, tmp_path: Path)
     assert "toggle_pause" not in engine.calls
     assert "set_playlist" not in engine.calls
     assert window.theme_manager.config.theme == "dark"
+
+
+def test_theme_change_does_not_interrupt_real_playback(qtbot, tmp_path: Path) -> None:
+    if not ffmpeg_available():
+        pytest.skip("ffmpeg is required for the playback integration check")
+    audio_path = generate_audio(tmp_path / "theme.flac", duration=3.0)
+    engine = AudioEngine(mpv_options={"ao": "null"}, poll_interval_ms=25)
+    if not engine.open():
+        pytest.skip("libmpv is not available in this environment")
+    window = MainWindow(ConfigManager(tmp_path / "settings.json"), engine)
+    qtbot.addWidget(window)
+    window.load_paths([audio_path])
+    window.playlist_view.doubleClicked.emit(window.playlist_model.index(0, 0))
+    qtbot.waitUntil(lambda: engine.position > 0.05, timeout=6000)
+    assert engine.state is PlaybackState.PLAYING
+
+    current_path = engine.current_path
+    window.theme_manager.set_theme("dark")
+    QApplication.processEvents()
+
+    assert engine.state is PlaybackState.PLAYING
+    assert engine.current_path == current_path
+    assert engine.position > 0.0
+    engine.stop()
+    engine.shutdown()
 
 
 def test_main_window_theme_controls_persist(qtbot, tmp_path: Path, monkeypatch) -> None:

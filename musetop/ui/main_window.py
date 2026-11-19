@@ -269,7 +269,7 @@ class MainWindow(QMainWindow):
             messages.append(f"La carpeta no contiene archivos de audio compatibles:\n{names}")
         if result.missing:
             names = self._summarize_paths(result.missing)
-            messages.append(f"No se encontro la ruta:\n{names}")
+            messages.append(f"No se encontró la ruta:\n{names}")
         if not messages:
             return
         QMessageBox.warning(self, "No se pudieron cargar algunos elementos", "\n\n".join(messages))
@@ -311,7 +311,7 @@ class MainWindow(QMainWindow):
             return
         self.engine.set_playlist(self.playlist_model.playlist.paths, preserve_current=True)
         if not self.engine.play_index(index.row()):
-            self.statusBar().showMessage("No se pudo iniciar la reproduccion.", 5000)
+            self.statusBar().showMessage("No se pudo iniciar la reproducción.", 5000)
 
     def _on_reordered(self) -> None:
         self._sync_engine()
@@ -322,7 +322,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _on_play_pause(self) -> None:
         if len(self.playlist_model.playlist) == 0:
-            self.statusBar().showMessage("La lista esta vacia. Abre archivos o una carpeta.", 5000)
+            self.statusBar().showMessage("La lista está vacía. Abre archivos o una carpeta.", 5000)
             return
         self.engine.toggle_pause()
 
@@ -363,10 +363,10 @@ class MainWindow(QMainWindow):
     def _on_engine_error(self, message: str) -> None:
         logger.error("Audio engine error: %s", message)
         self.statusBar().showMessage(message, 8000)
-        QMessageBox.critical(self, "Error de reproduccion", message)
+        QMessageBox.critical(self, "Error de reproducción", message)
 
     def _on_playback_finished(self) -> None:
-        self.statusBar().showMessage("Reproduccion finalizada.", 4000)
+        self.statusBar().showMessage("Reproducción finalizada.", 4000)
 
     # ------------------------------------------------------------------
     # Misc
