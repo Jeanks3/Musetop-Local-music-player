@@ -11,3 +11,11 @@ Todas las fechas usan el formato AAAA-MM-DD.
 - Preferencias JSON con validacion, escritura atomica y restablecimiento.
 - Logging rotativo en el directorio de datos del usuario.
 - Prueba de arquitectura que prohibe imports de red y caracteres emoji.
+
+### Hito 2 - Motor de audio
+
+- Motor libmpv independiente de la vista, con carga diferida de la biblioteca.
+- Reproduccion, pausa, parada, siguiente, anterior, seek y volumen 0-100.
+- Modos secuencial y repetir todo, con avance automatico al terminar una pista.
+- Pruebas de integracion con archivos MP3, FLAC, WAV, OGG, OPUS y M4A
+  generados con ffmpeg.
