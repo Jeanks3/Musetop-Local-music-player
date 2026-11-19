@@ -6,24 +6,28 @@ import logging
 from collections.abc import Sequence
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QAction, QCloseEvent, QDragEnterEvent, QDropEvent, QPalette
+from PySide6.QtCore import QSignalBlocker, QSize, Qt
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QDragEnterEvent, QDropEvent, QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QApplication,
+    QColorDialog,
+    QComboBox,
     QFileDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QToolBar,
     QVBoxLayout,
     QWidget,
 )
 
-from musetop.app.config import DEFAULT_ACCENT, AppConfig, ConfigManager
+from musetop.app.config import AppConfig, ConfigManager
 from musetop.core.audio_engine import AudioEngine, PlaybackMode
 from musetop.core.formats import FILE_DIALOG_FILTER, ScanResult, scan_paths
-from musetop.core.tags_reader import TrackInfo, read_track
-from musetop.ui.icons.svg_icons import render_icon
+from musetop.core.tags_reader import read_track
+from musetop.ui.icons.svg_icons import clear_icon_cache, render_icon
+from musetop.ui.theme.colors import THEME_DARK, THEME_LIGHT, THEME_SYSTEM, ThemePalette
+from musetop.ui.theme.manager import ThemeManager
 from musetop.ui.widgets.player_bar import PlayerBar
 from musetop.ui.widgets.playlist_model import PlaylistTableModel
 from musetop.ui.widgets.playlist_view import PlaylistView
@@ -39,10 +43,13 @@ class MainWindow(QMainWindow):
         config_manager: ConfigManager | None = None,
         engine: AudioEngine | None = None,
         parent: QWidget | None = None,
+        theme_manager: ThemeManager | None = None,
     ) -> None:
         super().__init__(parent)
         self._config_manager = config_manager or ConfigManager()
-        self._config: AppConfig = self._config_manager.load()
+        self.theme_manager = theme_manager or ThemeManager(self._config_manager)
+        self._config: AppConfig = self.theme_manager.config
+        self.theme_manager.apply_current()
         self._owns_engine = engine is None
         self.engine: AudioEngine = engine if engine is not None else AudioEngine(parent=self)
         self._last_directory = Path.home()
@@ -53,8 +60,9 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
 
         self._build_ui()
+        self.theme_manager.palette_changed.connect(self._on_palette_changed)
         self._connect_engine()
-        self._apply_icon_colors()
+        self._on_palette_changed(self.theme_manager.palette)
         self._update_track_count()
         self._update_actions()
 
@@ -81,6 +89,7 @@ class MainWindow(QMainWindow):
         self.player_bar.repeat_toggled.connect(self._on_repeat_toggled)
 
         central = QWidget(self)
+        central.setObjectName("centralWidget")
         layout = QVBoxLayout(central)
         layout.setContentsMargins(16, 10, 16, 0)
         layout.setSpacing(8)
@@ -99,6 +108,7 @@ class MainWindow(QMainWindow):
         toolbar.setObjectName("mainToolBar")
         toolbar.setMovable(False)
         toolbar.setIconSize(QSize(20, 20))
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.addToolBar(toolbar)
         self._toolbar = toolbar
 
@@ -121,6 +131,33 @@ class MainWindow(QMainWindow):
         self.remove_action.triggered.connect(self.remove_selected)
         toolbar.addAction(self.remove_action)
 
+        toolbar.addSeparator()
+        theme_label = QLabel("Tema", self)
+        theme_label.setObjectName("toolbarLabel")
+        toolbar.addWidget(theme_label)
+        self.theme_combo = QComboBox(self)
+        self.theme_combo.setObjectName("themeCombo")
+        self.theme_combo.addItem("Seguir al sistema", THEME_SYSTEM)
+        self.theme_combo.addItem("Claro", THEME_LIGHT)
+        self.theme_combo.addItem("Oscuro", THEME_DARK)
+        index = self.theme_combo.findData(self._config.theme)
+        self.theme_combo.setCurrentIndex(max(0, index))
+        self.theme_combo.setToolTip("Elegir el tema de la interfaz")
+        self.theme_combo.currentIndexChanged.connect(self._on_theme_selected)
+        toolbar.addWidget(self.theme_combo)
+
+        self.accent_button = QPushButton("Acento", self)
+        self.accent_button.setObjectName("accentButton")
+        self.accent_button.setToolTip("Elegir el color de acento")
+        self.accent_button.setIconSize(QSize(16, 16))
+        self.accent_button.clicked.connect(self._choose_accent)
+        toolbar.addWidget(self.accent_button)
+
+        self.reset_appearance_action = QAction("Restablecer", self)
+        self.reset_appearance_action.setToolTip("Restablecer las preferencias visuales")
+        self.reset_appearance_action.triggered.connect(self._reset_appearance)
+        toolbar.addAction(self.reset_appearance_action)
+
     def _connect_engine(self) -> None:
         self.engine.state_changed.connect(self._on_state_changed)
         self.engine.position_changed.connect(self.player_bar.set_position)
@@ -134,13 +171,45 @@ class MainWindow(QMainWindow):
         self.player_bar.set_repeat_checked(mode == PlaybackMode.REPEAT_ALL.value)
         self.player_bar.set_state(getattr(self.engine.state, "value", self.engine.state))
 
-    def _apply_icon_colors(self) -> None:
-        text_color = self.palette().color(QPalette.ColorRole.ButtonText).name()
-        self.open_files_action.setIcon(render_icon("file_plus", text_color))
-        self.open_folder_action.setIcon(render_icon("folder", text_color))
-        self.remove_action.setIcon(render_icon("trash", text_color))
-        self.setWindowIcon(render_icon("app", DEFAULT_ACCENT, 64))
-        self.player_bar.refresh_icons(text_color, DEFAULT_ACCENT, "#ffffff")
+    def _on_palette_changed(self, palette: ThemePalette) -> None:
+        self._config = self.theme_manager.config
+        clear_icon_cache()
+        self._apply_icon_colors(palette)
+        with QSignalBlocker(self.theme_combo):
+            index = self.theme_combo.findData(self._config.theme)
+            self.theme_combo.setCurrentIndex(max(0, index))
+
+    def _apply_icon_colors(self, palette: ThemePalette) -> None:
+        self.open_files_action.setIcon(render_icon("file_plus", palette.text))
+        self.open_folder_action.setIcon(render_icon("folder", palette.text))
+        self.remove_action.setIcon(render_icon("trash", palette.text))
+        self.reset_appearance_action.setIcon(render_icon("reset", palette.text))
+        self.setWindowIcon(render_icon("app", palette.accent, 64))
+        self.player_bar.refresh_icons(palette.text, palette.accent, palette.on_accent)
+        self._update_accent_swatch(palette)
+
+    def _update_accent_swatch(self, palette: ThemePalette) -> None:
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(QColor(palette.accent))
+        self.accent_button.setIcon(QIcon(pixmap))
+
+    def _on_theme_selected(self, _index: int) -> None:
+        theme = self.theme_combo.currentData()
+        if isinstance(theme, str):
+            self.theme_manager.set_theme(theme)
+
+    def _choose_accent(self) -> None:
+        chosen = QColorDialog.getColor(
+            QColor(self.theme_manager.palette.accent),
+            self,
+            "Color de acento",
+        )
+        if chosen.isValid():
+            self.theme_manager.set_accent(chosen.name())
+
+    def _reset_appearance(self) -> None:
+        self.theme_manager.reset()
+        self.statusBar().showMessage("Apariencia restablecida.", 4000)
 
     # ------------------------------------------------------------------
     # File loading

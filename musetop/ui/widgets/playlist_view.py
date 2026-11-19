@@ -33,8 +33,16 @@ class PlaylistView(QTableView):
         self.setShowGrid(False)
         self.verticalHeader().setVisible(False)
         self.verticalHeader().setDefaultSectionSize(34)
+        self._configure_columns()
+
+    def setModel(self, model) -> None:  # noqa: N802
+        super().setModel(model)
+        self._configure_columns()
+
+    def _configure_columns(self) -> None:
         header = self.horizontalHeader()
         header.setHighlightSections(False)
+        header.setStretchLastSection(False)
         header.setSectionResizeMode(PlaylistTableModel.COLUMN_NUMBER, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(PlaylistTableModel.COLUMN_TITLE, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(PlaylistTableModel.COLUMN_ARTIST, QHeaderView.ResizeMode.Stretch)

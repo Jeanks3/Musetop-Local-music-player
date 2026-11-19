@@ -19,3 +19,22 @@ Todas las fechas usan el formato AAAA-MM-DD.
 - Modos secuencial y repetir todo, con avance automatico al terminar una pista.
 - Pruebas de integracion con archivos MP3, FLAC, WAV, OGG, OPUS y M4A
   generados con ffmpeg.
+
+### Hito 3 - Carga y lista de reproduccion
+
+- Dialogos del sistema para abrir archivos y carpetas, ademas de arrastrar y
+  soltar sobre la ventana o la lista.
+- Escaneo no recursivo de carpetas y rechazo explicado de formatos no admitidos.
+- Metadatos con mutagen: titulo, artista, album y duracion, con respaldo para
+  archivos sin etiquetas.
+- Lista con numero, titulo, artista, album y duracion; doble clic para
+  reproducir, seleccion multiple, eliminacion y reordenacion por arrastre.
+- Barra inferior con metadatos, progreso, transporte y volumen.
+
+### Hito 4 - Temas y accesibilidad visual
+
+- Temas Claro, Oscuro y Seguir al sistema, con deteccion de cambios del sistema.
+- Selector de color de acento aplicado a botones activos, progreso y seleccion.
+- Paletas ajustadas para contraste WCAG 2.1 AA y pruebas de contraste.
+- Persistencia JSON de tema y acento, y boton para restablecer la apariencia.
+- Prueba en vivo que recorre los textos de la interfaz y rechaza emojis.
